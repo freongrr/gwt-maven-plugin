@@ -524,9 +524,8 @@ public class CompileMojo
                 getLog().info( "Will instrument " + files.size() + " files for GWT code coverage" );
                 try
                 {
-                    // TODO : is that the 'target' directory?
-                    File outFile = new File( getOutputDirectory(), "coverage-list.txt" );
-                    outFile.createNewFile();
+                    String buildDirectory = getProject().getBuild().getDirectory();
+                    File outFile = new File( buildDirectory, "gwt-coverage.in" );
                     PrintStream stream = new PrintStream(outFile);
                     for ( String file : files )
                     {

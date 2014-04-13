@@ -26,9 +26,14 @@ package org.codehaus.mojo.gwt.shell;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.apache.commons.lang.SystemUtils;
 import org.apache.maven.artifact.Artifact;
@@ -39,6 +44,7 @@ import org.codehaus.mojo.gwt.utils.GwtModuleReaderException;
 import org.codehaus.plexus.compiler.util.scan.InclusionScanException;
 import org.codehaus.plexus.compiler.util.scan.StaleSourceScanner;
 import org.codehaus.plexus.compiler.util.scan.mapping.SingleTargetSourceMapping;
+import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.StringUtils;
 
 /**
@@ -334,6 +340,13 @@ public class CompileMojo
      */
     private String sourceLevel;
 
+    /**
+     * Code coverage generation configuration.
+     *
+     * @parameter expression="${coverage}"
+     */
+    private CoverageConfiguration coverage;
+
     public void doExecute( )
         throws MojoExecutionException, MojoFailureException
     {
@@ -422,6 +435,7 @@ public class CompileMojo
             getLog().debug( "NOT create extra directory " );
         }
 
+        addCoverageArgument( cmd );
         addCompileSourceArtifacts( cmd );
         addArgumentDeploy(cmd);
         addArgumentGen( cmd );
@@ -575,5 +589,61 @@ public class CompileMojo
         {
             throw new MojoExecutionException( e.getMessage(), e );
         }
+    }
+
+    private void addCoverageArgument(JavaCommand cmd)
+    {
+        if ( coverage != null && coverage.isEnabled() )
+        {
+            SortedSet<String> files = getFilesToCover();
+            if ( files.isEmpty() )
+            {
+                getLog().warn( "Nothing to instrument" );
+            }
+            else
+            {
+                getLog().info( "Will instrument " + files.size() + " files for GWT code coverage" );
+                try
+                {
+                    // TODO : is that the 'target' directory?
+                    File outFile = new File( getOutputDirectory(), "coverage-list.txt" );
+                    outFile.createNewFile();
+                    PrintStream stream = new PrintStream(outFile);
+                    for ( String file : files )
+                    {
+                        stream.println( file );
+                    }
+                    cmd.systemProperty( "gwt.coverage", outFile.getAbsolutePath() );
+                }
+                catch ( IOException e )
+                {
+                    getLog().warn( "Could not prepare the files for instrumentation", e );
+                }
+            }
+        }
+    }
+
+    private SortedSet<String> getFilesToCover()
+    {
+        SortedSet<String> allFiles = new TreeSet<String>();
+
+        @SuppressWarnings("unchecked")
+        Collection<String> sourcePaths = (Collection<String>) getProject().getCompileSourceRoots();
+        for (String sourcePath : sourcePaths)
+        {
+            File sourceDirectory = new File( sourcePath );
+            if ( sourceDirectory.exists() )
+            {
+                DirectoryScanner scanner = new DirectoryScanner();
+                scanner.setBasedir( sourceDirectory.getAbsolutePath() );
+                scanner.setIncludes( coverage.getIncludes() );
+                scanner.setExcludes( coverage.getExcludes() );
+                scanner.scan();
+
+                Collections.addAll( allFiles, scanner.getIncludedFiles() );
+            }
+        }
+
+        return allFiles;
     }
 }

@@ -28,6 +28,7 @@ import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -547,6 +548,12 @@ public class CompileMojo
 
         @SuppressWarnings("unchecked")
         Collection<String> sourcePaths = (Collection<String>) getProject().getCompileSourceRoots();
+
+        getLog().info( "Building the list of source files to instrument" );
+        getLog().info( "  Paths: " + sourcePaths );
+        getLog().info( "  Includes: " + Arrays.toString( coverage.getIncludes() ) );
+        getLog().info( "  Excludes: " + Arrays.toString( coverage.getExcludes() ) );
+
         for (String sourcePath : sourcePaths)
         {
             File sourceDirectory = new File( sourcePath );

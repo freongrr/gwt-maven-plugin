@@ -114,12 +114,6 @@ public final class ProjectScanner extends AbstractScanner
 
     private void scan( File fileOrDirectory )
     {
-        if ( !fileOrDirectory.exists() )
-        {
-            log.warn( "File or directory does not exist: " + fileOrDirectory.getPath() );
-            return;
-        }
-
         try
         {
             log.info( "Scanning: " + fileOrDirectory.getPath() );
@@ -131,6 +125,14 @@ public final class ProjectScanner extends AbstractScanner
 
             Collections.addAll( matchingFiles, scanner.getIncludedFiles() );
         }
+        catch ( FileNotFoundException e )
+        {
+            log.warn( e );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            log.warn( e );
+        }
         catch ( Throwable t )
         {
             log.warn( "Error while scanning '" + fileOrDirectory.getPath() + "'", t );
@@ -138,8 +140,12 @@ public final class ProjectScanner extends AbstractScanner
     }
 
     private AbstractScanner scannerFor( File fileOrDirectory )
-    {
-        if ( fileOrDirectory.isDirectory() )
+            throws FileNotFoundException, IllegalArgumentException {
+        if ( !fileOrDirectory.exists() )
+        {
+            throw new FileNotFoundException( "File does not exist: " + fileOrDirectory );
+        }
+        else if ( fileOrDirectory.isDirectory() )
         {
             DirectoryScanner scanner = new DirectoryScanner();
             scanner.setBasedir( fileOrDirectory );

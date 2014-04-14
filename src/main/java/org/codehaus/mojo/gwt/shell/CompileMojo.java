@@ -32,15 +32,16 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.codehaus.mojo.gwt.GwtModule;
 import org.codehaus.mojo.gwt.utils.GwtModuleReaderException;
+import org.codehaus.mojo.gwt.utils.ProjectScanner;
 import org.codehaus.plexus.compiler.util.scan.InclusionScanException;
 import org.codehaus.plexus.compiler.util.scan.StaleSourceScanner;
 import org.codehaus.plexus.compiler.util.scan.mapping.SingleTargetSourceMapping;
-import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -683,7 +684,8 @@ public class CompileMojo
         }
     }
 
-    private void addCoverageArgument(JavaCommand cmd)
+    private void addCoverageArgument( JavaCommand cmd )
+        throws MojoExecutionException
     {
         if ( coverage != null && coverage.isEnabled() )
         {
@@ -697,9 +699,8 @@ public class CompileMojo
                 getLog().info( "Will instrument " + files.size() + " files for GWT code coverage" );
                 try
                 {
-                    // TODO : is that the 'target' directory?
-                    File outFile = new File( getOutputDirectory(), "coverage-list.txt" );
-                    outFile.createNewFile();
+                    String buildDirectory = getProject().getBuild().getDirectory();
+                    File outFile = new File( buildDirectory, "gwt-coverage.in" );
                     PrintStream stream = new PrintStream(outFile);
                     for ( String file : files )
                     {
@@ -716,26 +717,28 @@ public class CompileMojo
     }
 
     private SortedSet<String> getFilesToCover()
+        throws MojoExecutionException
     {
-        SortedSet<String> allFiles = new TreeSet<String>();
+        getLog().info( "Building the list of source files to instrument" );
+        getLog().info( "  Includes: " + Arrays.toString( coverage.getIncludes() ) );
+        getLog().info( "  Excludes: " + Arrays.toString( coverage.getExcludes() ) );
+        getLog().info( "  Scan dependencies: " + ( coverage.isScanDependencies() ? "yes" : "no" ) );
 
-        @SuppressWarnings("unchecked")
-        Collection<String> sourcePaths = (Collection<String>) getProject().getCompileSourceRoots();
-        for (String sourcePath : sourcePaths)
+        ProjectScanner scanner = new ProjectScanner( getLog() );
+        scanner.setProject(getProject());
+        if ( coverage.isScanDependencies() )
         {
-            File sourceDirectory = new File( sourcePath );
-            if ( sourceDirectory.exists() )
-            {
-                DirectoryScanner scanner = new DirectoryScanner();
-                scanner.setBasedir( sourceDirectory.getAbsolutePath() );
-                scanner.setIncludes( coverage.getIncludes() );
-                scanner.setExcludes( coverage.getExcludes() );
-                scanner.scan();
-
-                Collections.addAll( allFiles, scanner.getIncludedFiles() );
-            }
+            scanner.setArtifacts(getClasspath(Artifact.SCOPE_COMPILE));
         }
 
-        return allFiles;
+        scanner.setIncludes(coverage.getIncludes());
+        scanner.setExcludes(coverage.getExcludes());
+        scanner.scan();
+
+        String[] includedFiles = scanner.getIncludedFiles();
+
+        SortedSet<String> sortedFiles = new TreeSet<String>();
+        Collections.addAll( sortedFiles, includedFiles );
+        return sortedFiles;
     }
 }

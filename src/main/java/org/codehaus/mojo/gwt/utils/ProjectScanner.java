@@ -116,8 +116,11 @@ public final class ProjectScanner extends AbstractScanner
     {
         try
         {
-            log.info( "Scanning: " + fileOrDirectory.getPath() );
-            
+            if ( log.isDebugEnabled() )
+            {
+                log.debug( "Scanning: " + fileOrDirectory.getPath() );
+            }
+
             AbstractScanner scanner = scannerFor( fileOrDirectory );
             scanner.setIncludes( includes );
             scanner.setExcludes( excludes );
@@ -127,11 +130,11 @@ public final class ProjectScanner extends AbstractScanner
         }
         catch ( FileNotFoundException e )
         {
-            log.warn( e );
+            log.warn( e.getMessage() );
         }
         catch ( IllegalArgumentException e )
         {
-            log.warn( e );
+            log.warn( e.getMessage() );
         }
         catch ( Throwable t )
         {

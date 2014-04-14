@@ -24,16 +24,10 @@ package org.codehaus.mojo.gwt.shell;
  */
 public final class CoverageConfiguration
 {
-    private boolean enabled;
-    private boolean scanDependencies;
+    private boolean enabled = false;
+    private boolean scanDependencies = false;
     private String[] includes = {};
     private String[] excludes = {};
-
-    public CoverageConfiguration()
-    {
-        this.enabled = true;
-        this.scanDependencies = false;
-    }
 
     public boolean isEnabled()
     {

@@ -408,6 +408,7 @@ public class CompileMojo
     /**
      * Code coverage generation configuration.
      */
+    @Parameter
     private CoverageConfiguration coverage;
 
     public void doExecute( )
